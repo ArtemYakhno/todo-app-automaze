@@ -1,0 +1,17 @@
+{
+  "name": "todo-app-viyar",
+  "version": "0.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@11.13.1",
+  "scripts": {
+    "dev": "pnpm -r --parallel run dev",
+    "dev:backend": "pnpm --filter @todo-app/backend run dev",
+    "dev:frontend": "pnpm --filter @todo-app/frontend run dev",
+    "typecheck": "pnpm -r run typecheck",
+    "lint": "pnpm -r run lint",
+    "test": "pnpm -r run test"
+  }
+}
