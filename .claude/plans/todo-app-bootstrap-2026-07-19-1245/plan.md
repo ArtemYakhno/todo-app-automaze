@@ -1,5 +1,5 @@
 Ініціалізація проєкту "todo-app-viyar" (bootstrap: монорепо, NestJS+React scaffold, Docker+Postgres, Prisma, health-check, приведення AI-хуків до ладу, git/GitHub) + налаштування CLAUDE.md для подальшої роботи з AI.
-status: active
+status: done
 
 # План: Ініціалізація проєкту "todo-app-viyar" + налаштування AI-workflow
 
