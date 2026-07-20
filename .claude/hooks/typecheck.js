@@ -15,14 +15,21 @@ process.stdin.on('end', () => {
     process.exit(0);
   }
 
+  const normalized = filePath.replace(/\\/g, '/');
+  const match = normalized.match(/apps\/(backend|frontend)\//);
+  if (!match) {
+    process.exit(0);
+  }
+  const pkg = `@todo-app/${match[1]}`;
+
   try {
-    execSync('npx tsc --noEmit', { cwd: process.cwd(), stdio: 'pipe' });
+    execSync(`pnpm --filter ${pkg} run typecheck`, { cwd: process.cwd(), stdio: 'pipe' });
     process.exit(0);
   } catch (err) {
     const output = (err.stdout?.toString() || '') + (err.stderr?.toString() || '');
     console.log(
       JSON.stringify({
-        systemMessage: `TypeScript помилки після зміни ${filePath}:\n${output.slice(0, 4000)}`,
+        systemMessage: `TypeScript errors after editing ${filePath} (${pkg}):\n${output.slice(0, 4000)}`,
       })
     );
     process.exit(0);

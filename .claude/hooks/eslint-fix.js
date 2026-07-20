@@ -15,13 +15,24 @@ process.stdin.on('end', () => {
     process.exit(0);
   }
 
+  const normalized = filePath.replace(/\\/g, '/');
+  const match = normalized.match(/apps\/(backend|frontend)\//);
+  if (!match) {
+    process.exit(0);
+  }
+  const pkg = `@todo-app/${match[1]}`;
+  const linter = match[1] === 'backend' ? 'eslint' : 'oxlint';
+
   try {
-    execSync(`npx expo lint --fix "${filePath}"`, { cwd: process.cwd(), stdio: 'pipe' });
+    execSync(`pnpm --filter ${pkg} exec ${linter} --fix "${filePath}"`, {
+      cwd: process.cwd(),
+      stdio: 'pipe',
+    });
   } catch (err) {
     const output = (err.stdout?.toString() || '') + (err.stderr?.toString() || '');
     console.log(
       JSON.stringify({
-        systemMessage: `ESLint знайшов проблеми у ${filePath} (частину виправлено автоматично):\n${output.slice(0, 4000)}`,
+        systemMessage: `${linter} found issues in ${filePath} (some may have been auto-fixed):\n${output.slice(0, 4000)}`,
       })
     );
   }

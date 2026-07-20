@@ -17,7 +17,7 @@ process.stdin.on('end', () => {
   }
 
   const normalized = filePath.replace(/\\/g, '/');
-  const inUiDir = /(^|\/)(app|components)\//.test(normalized) || /^(app|components)\//.test(normalized);
+  const inUiDir = /apps\/frontend\/src\/(components|pages|features)\//.test(normalized);
   if (!inUiDir) {
     process.exit(0);
   }
@@ -32,9 +32,9 @@ process.stdin.on('end', () => {
   if (/\bfetch\(/.test(content) || /\baxios\./.test(content) || /\baxios\(/.test(content)) {
     console.log(
       JSON.stringify({
-        systemMessage: `Попередження: ${path.basename(
+        systemMessage: `Warning: ${path.basename(
           filePath
-        )} містить прямий виклик fetch()/axios у app/ або components/. Згідно з CLAUDE.md бізнес-логіку запитів слід виносити в api/ або queries/.`,
+        )} contains a direct fetch()/axios call inside components/pages/features. Per CLAUDE.md, request logic belongs in apps/frontend/src/api/ or queries/.`,
       })
     );
   }
