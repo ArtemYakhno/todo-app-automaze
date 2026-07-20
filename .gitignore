@@ -9,7 +9,6 @@ generated/
 coverage/
 
 .history/
-.claude/plans/
 
 .vscode/
 .idea/
