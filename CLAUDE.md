@@ -1,4 +1,4 @@
-> **Living document.** Це v1-драфт, написаний перед скафолдингом (Stage 2 bootstrap-плану). Фінальний прохід — Stage 10, коли реальна структура вже стабілізується.
+> **Living document.** Bootstrap-план завершено (Stage 10 з 11). Домен-моделі, автентифікація, CRUD-ендпоінти, шеринг по email — окремий наступний фічовий план.
 
 ## Product overview
 
@@ -22,9 +22,9 @@ To-Do List — web-застосунок, тестове завдання для 
 
 | Шар | Технології |
 |---|---|
-| Backend | NestJS, Prisma ORM, PostgreSQL, JWT auth (Passport-JWT, argon2, глобальний Guard), REST API, Swagger/OpenAPI (`@nestjs/swagger`, мінімальний), Nodemailer + SMTP (Mailtrap/Ethereal для dev), `helmet`, глобальний `HttpExceptionFilter` + `ValidationPipe` (class-validator + class-transformer), CORS, Jest |
-| Frontend | React + TypeScript, Vite, React Router (`react-router-dom`), TanStack Query, axios (обгорнутий у `api/`/`queries/`), Tailwind CSS, shadcn/ui (+ light/dark тема), React Hook Form, Zod, Vitest |
-| Інфраструктура | Docker + docker-compose (Postgres), pnpm workspaces (монорепо, `apps/backend` + `apps/frontend`), git + GitHub |
+| Backend | NestJS, Prisma ORM 7, PostgreSQL, JWT auth (Passport-JWT + argon2), Swagger, `@nestjs/terminus`, Nodemailer, `helmet`, `class-validator`/`class-transformer`, CORS, Jest |
+| Frontend | React + TypeScript, Vite, React Router, TanStack Query, axios, Tailwind CSS, shadcn/ui, React Hook Form, Zod, Vitest |
+| Інфраструктура | Docker + docker-compose (Postgres), pnpm workspaces (`apps/backend` + `apps/frontend`), git + GitHub |
 | AI-workflow | Claude Code, custom-flow процес, `.claude/hooks` |
 
 ## Структура монорепо
@@ -32,50 +32,56 @@ To-Do List — web-застосунок, тестове завдання для 
 ```
 todo-app-viyar/
 ├── apps/
-│   ├── backend/     # NestJS
-│   └── frontend/    # Vite + React
+│   ├── backend/     # NestJS — common/ (cross-cutting: setup, configs, filters, middlewares, prisma), health/, prisma/, prisma.config.ts
+│   └── frontend/    # Vite + React — api/, queries/, features/, components/ (+ ui/ shadcn), pages/, lib/
 ├── docker-compose.yml
-├── .claude/
-└── pnpm-workspace.yaml
+├── .env.example
+└── .claude/
 ```
 
-Без окремого `packages/shared`: Zod-схеми й типи визначаються окремо в backend і frontend. Свідомий trade-off для невеликого тестового проєкту (дублювання мінімальне); можна винести спільний пакет пізніше, якщо кодова база зросте.
+Без окремого `packages/shared`: Zod-схеми й типи визначаються окремо в backend і frontend — свідомий trade-off для невеликого проєкту.
+
+## Локальний запуск
+
+`docker compose up -d` (Postgres `:5432`) → `pnpm install` → `pnpm dev` (backend `:3001`, frontend `:5173`, `.env` у корені за зразком `.env.example`). `pnpm typecheck`/`lint`/`test` — по всіх пакетах, або з `--filter @todo-app/backend|frontend` для одного. Swagger — `/api`, health-check — `/health`.
 
 ## Naming conventions
 
-- React-компоненти: PascalCase, один компонент на файл.
-- Custom hooks: `useX.ts`.
-- Zod-схеми: `*.schema.ts`, лише у `apps/frontend/src/**/schemas/` (для RHF-резолверів). Backend валідує вхідні дані через class-validator DTO-класи (`*.dto.ts`) — окреме визначення форми, див. розділ "Архітектурні рішення".
-- API-виклики лише в `apps/frontend/src/api/` або `.../queries/` — ніколи напряму в компонентах. Це саме те, що контролює хук `warn-fetch-in-ui.js` (після переробки на Stage 9).
+- React-компоненти: PascalCase, один компонент на файл. Custom hooks: `useX.ts`.
+- Zod-схеми: `*.schema.ts`, лише у `apps/frontend/src/**/schemas/` (RHF-резолвери). Backend валідує через class-validator DTO (`*.dto.ts`) — окреме визначення форми, див. "Архітектурні рішення".
+- API-виклики лише в `api/`/`queries/` — ніколи напряму в `components/`, `pages/`, `features/` (контролює `warn-fetch-in-ui.js`).
 
 ## Testing conventions
 
-- Backend: **Jest**, `*.spec.ts` поруч з файлом, що тестується (дефолт NestJS).
-- Frontend: **Vitest**, `*.test.tsx` поруч з файлом — нативний для Vite-проєкту (спільний конфіг, jsdom, швидкість), відповідно до глобального CLAUDE.md користувача.
+- Backend: **Jest**, `*.spec.ts` поруч з файлом (дефолт NestJS).
+- Frontend: **Vitest**, `*.test.tsx` поруч з файлом (нативний для Vite).
+- Запуск: `pnpm --filter @todo-app/backend|frontend run test`.
 
 ## Git workflow
 
-Коміт по завершенню кожного stage bootstrap/фічового плану. Процес роботи — `custom-flow`: кожен stage отримує окремий детальний план, який користувач явно затверджує, і лише після цього — реалізація.
+Коміт по завершенню кожного stage. Процес — `custom-flow`: окремий план на кожен stage, явне підтвердження користувача до реалізації.
 
 ## Архітектурні рішення
 
-- **Шеринг по email:** read-only live-посилання за криптографічно випадковим `ShareToken` (прив'язаний до `ownerId`, без email-прив'язки одержувача, без потреби акаунту в одержувача). Email — Nodemailer + SMTP.
-- **Auth (JWT):** access token (~15 хв) + refresh token (httpOnly cookie, ~7-30 днів) через Passport-JWT стратегії, пароль хешується `argon2` (argon2id). **Без сторінки саморєестрації** — користувачі лише через `prisma/seed.ts` (2-3 демо-акаунти). Причина: швидший повторний логін під час демонстрації (пароль, а не email round-trip через magic-link), email лишається потрібним лише для шерингу.
-- **UI-тема:** shadcn/ui поверх Tailwind, мінімальний light/dark перемикач (CSS variables/`class` strategy).
-- **Роутинг (frontend):** `react-router-dom`, 3 маршрути — `/login` (публічний), `/tasks` (захищений, `ProtectedRoute`-обгортка редіректить на `/login` без валідного JWT), `/shared/:token` (публічний, read-only).
-- **Безпека і обробка помилок (backend):** `JwtAuthGuard` глобально через `APP_GUARD`, публічні ендпоінти відмічаються `@Public()`; `HttpExceptionFilter` (`app.useGlobalFilters()`) — уніфікований формат помилки **`{ statusCode, message, errors? }`** (без поля `error`/назви класу винятку — на фронті достатньо `statusCode` для розгалуження логіки; `errors` — мапа по полях, з'являється лише для validation-помилок); непередбачені винятки логуються через `Logger` (стек + `method`/`url`) і повертають generic `Internal server error` без витоку деталей. Стандартний NestJS `ValidationPipe` (class-validator + class-transformer, конфіг у `common/configs/validation.config.ts`: `whitelist`, `forbidNonWhitelisted`, `transform`, кастомний `exceptionFactory` групує помилки по полях у `errors`); CORS (`common/configs/cors.config.ts`); `helmet` для базових security-заголовків; `LoggerMiddleware` (`common/middlewares/`) логує кожен HTTP-запит (`method url statusCode contentLength - userAgent ip`). Уся конфігурація збирається в `common/setup/app.setup.ts`, `main.ts` лишається мінімальним (лише bootstrap).
-- **Env-змінні:** `@nestjs/config` (`ConfigModule.forRoot({ isGlobal: true, envFilePath: '../../.env' })`) підключено з Stage 4. Читання значень — **лише через `ConfigService`** (`configService.get('KEY', 'default')`), ніколи напряму `process.env` — конфіги, які потребують env (напр. `cors.config.ts`), оформлюються як фабрики (`getCorsConfig(configService)`), а не статичні об'єкти.
-  - **Свідомий відхід від "schema-first Zod"** (глобальний CLAUDE.md користувача): форма даних тепер описується двічі — Zod-схема на frontend (RHF-резолвери), class-validator DTO на backend. Це усвідомлений trade-off, обраний користувачем 2026-07-19 на користь стандартного/звичного NestJS-підходу, а не забуте узгодження.
-- **Swagger:** мінімальне підключення (`SwaggerModule.setup` у `main.ts`, доступний на `/api`) — без детальних `@ApiProperty`/`@ApiResponse` декораторів у v1.
-- **Email-провайдер (уточнення):** `@nestjs-modules/mailer` (NestJS-обгортка над nodemailer, `MailerModule.forRootAsync`) замість сирого `nodemailer` — зручний DI та підтримка шаблонів листів. Реалізація — у наступному фічовому плані.
-- **`@Global() CommonModule`-патерн:** коли з'являться сервіси, потрібні кільком модулям одразу (напр. майбутній `HashService` на `argon2`, використовуваний і `AuthModule`, і потенційно іншими) — виносити їх у `@Global()` модуль з `providers`/`exports`, а не дублювати імпорти по модулях. Поки не застосовується (Stage 4 конфігурує через `setupApp`, без спільних DI-провайдерів) — застосувати в наступному фічовому плані за потреби.
-- **Prisma ORM (версія 7, підключено на Stage 7):** `apps/backend/prisma.config.ts` — обов'язковий CLI-конфіг (`schema`, `migrations.path`, `datasource.url` через `dotenv`+`env('DATABASE_URL')`, той самий відносний шлях до кореневого `.env`, що й `ConfigModule`). `@prisma/adapter-pg` (+ `pg`) — обов'язковий driver adapter: у v7 `PrismaClient` завжди створюється з адаптером, `schema.prisma`-datasource без `url`. Generator: `provider = "prisma-client"`, `output = "../generated/prisma"` (`apps/backend/generated/`, поруч із `src/`, у `.gitignore`), `moduleFormat = "commonjs"` (бекенд без `"type": "module"`, дефолтний вивід Prisma 7 — ESM, несумісний без цього поля). `PrismaService extends PrismaClient` (`OnModuleInit`/`OnModuleDestroy` — `$connect()`/`$disconnect()`, адаптер отримує `DATABASE_URL` через `ConfigService.getOrThrow()`) + `PrismaModule` (`@Global()`) — обидва в `common/prisma/`, поруч з іншими cross-cutting модулями (`setup`, `filters`, `configs`, `middlewares`).
+- **Шеринг по email:** read-only лінк за криптовипадковим `ShareToken` (прив'язаний до `ownerId`, без email-верифікації одержувача, без акаунту в одержувача). Email — Nodemailer + SMTP.
+- **Auth (JWT):** access (~15хв) + refresh (httpOnly cookie, ~7-30д), `argon2`. Без саморєестрації — юзери лише через `prisma/seed.ts` (швидший демо-логін, email лишається потрібним тільки для шерингу).
+- **UI-тема:** shadcn/ui + Tailwind, CSS-variables light/dark.
+- **Роутинг:** `/login` (публічний), `/tasks` (за `ProtectedRoute`), `/shared/:token` (публічний read-only).
+- **Безпека/помилки (backend):** глобальний `JwtAuthGuard` + `@Public()`-винятки. `HttpExceptionFilter` → уніфікований `{ statusCode, message, errors? }` (без поля `error`). `ValidationPipe` (class-validator, `whitelist`+`forbidNonWhitelisted`+`transform`, кастомний `exceptionFactory` групує помилки по полях). CORS + `helmet` + `LoggerMiddleware`. Уся конфігурація — в `common/setup/app.setup.ts`, `main.ts` лише bootstrap.
+- **Env:** тільки через `ConfigService`, ніколи `process.env` напряму. **Свідомий відхід від "schema-first Zod"** (global CLAUDE.md користувача) — backend на class-validator DTO, а не Zod; рішення користувача від 2026-07-19, не забуте узгодження.
+- **`@Global() CommonModule`-патерн:** для сервісів, потрібних кільком модулям (напр. майбутній `HashService`) — окремий `@Global()`-модуль замість дублювання імпортів. Застосувати в фічовому плані за потреби.
+- **Prisma 7:** `prisma.config.ts` і driver adapter (`@prisma/adapter-pg`) обов'язкові в рантаймі (`schema.prisma` без `url`); generator `output` — поза `src/`, `moduleFormat = "commonjs"` (інакше ESM-конфлікт з CommonJS-бекендом). `PrismaService`/`PrismaModule` — `common/prisma/`, `@Global()`.
+- **Health-check:** `GET /health` (Terminus + кастомний `PrismaHealthIndicator`, `$queryRaw SELECT 1`). `health/` — перший "фічовий" модуль, взірець для `TasksModule`/`AuthModule`. Поки без `@Public()` (гварда ще нема).
+- **Frontend API-шар:** `api/client.ts` — єдиний axios-інстанс (`withCredentials: true`, наперед під refresh-cookie). `lib/queryClient.ts` — спільний `QueryClient` (`retry: false`). Vite читає кореневий `.env` (`envDir`), не окремий `apps/frontend/.env`.
 
-## Domain model (placeholder)
+## Domain model
 
-`Task`: `title`, `description`, `priority` (1-5), `tags`, `dueDate`, `status`. Повна Prisma-схема (включно з `User`, `ShareToken`) проєктується в наступному фічовому плані — тут лише фіксація очікуваних полів, щоб scaffolding не суперечив майбутній моделі.
+`Task`: `title`, `description`, `priority` (1-5), `tags`, `dueDate`, `status`. Повна Prisma-схема (включно з `User`, `ShareToken`) — у наступному фічовому плані.
 
 ## AI workflow
 
-Процес роботи над проєктом — `custom-flow`.
+Процес — `custom-flow`: окремий план на кожен stage, явне підтвердження до реалізації.
 
+Хуки (`.claude/hooks/`): `block-env-files.js` (блокує читання/запис `.env`), `block-git-push.js` (підтвердження перед `git push`), `typecheck.js` (`tsc --noEmit` по пакету зміненого файлу), `eslint-fix.js` (`eslint`/`oxlint --fix` по пакету), `warn-fetch-in-ui.js` (попереджає про `fetch`/`axios` поза `api/`/`queries/`).
+
+**No duplicate types:** типи не дублюються вручну — frontend виводить з Zod (`z.infer`), backend — DTO-класи; спільного пакета типів свідомо нема, дублювання між шарами мінімальне й усвідомлене.
