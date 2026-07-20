@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { LoggerMiddleware } from './common/middlewares/logger.middleware';
+import { PrismaModule } from './common/prisma/prisma.module';
 
 @Module({
   imports: [
@@ -10,6 +11,7 @@ import { LoggerMiddleware } from './common/middlewares/logger.middleware';
       isGlobal: true,
       envFilePath: '../../.env',
     }),
+    PrismaModule,
   ],
   controllers: [AppController],
   providers: [AppService],
