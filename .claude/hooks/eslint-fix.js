@@ -21,7 +21,7 @@ process.stdin.on('end', () => {
     process.exit(0);
   }
   const pkg = `@todo-app/${match[1]}`;
-  const linter = match[1] === 'backend' ? 'eslint' : 'oxlint';
+  const linter = 'eslint';
 
   try {
     execSync(`pnpm --filter ${pkg} exec ${linter} --fix "${filePath}"`, {

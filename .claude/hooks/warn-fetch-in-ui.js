@@ -17,7 +17,7 @@ process.stdin.on('end', () => {
   }
 
   const normalized = filePath.replace(/\\/g, '/');
-  const inUiDir = /apps\/frontend\/src\/(components|pages|features)\//.test(normalized);
+  const inUiDir = /apps\/frontend\/src\/(components|pages|features|app)\//.test(normalized);
   if (!inUiDir) {
     process.exit(0);
   }

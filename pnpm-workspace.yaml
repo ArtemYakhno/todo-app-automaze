@@ -1,8 +1,17 @@
 packages:
   - "apps/*"
 
+# Dedupe zod to a single v4 across the tree: the shadcn CLI (devDep) pulls a
+# transitional zod@3.25 whose bundled v4-core would otherwise clash with
+# @hookform/resolvers' `zod/v4/core` resolution. shadcn's own zod is never
+# executed here (CSS-only import; the CLI runs via `pnpm dlx`).
+overrides:
+  zod: ^4.4.3
+
 allowBuilds:
   '@prisma/engines': true
   '@scarf/scarf': false
+  esbuild: true
   prisma: true
+  sharp: true
   unrs-resolver: true

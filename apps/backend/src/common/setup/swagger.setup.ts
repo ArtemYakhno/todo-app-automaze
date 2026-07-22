@@ -3,8 +3,8 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 export function setupSwagger(app: INestApplication): void {
   const config = new DocumentBuilder()
-    .setTitle('todo-app-viyar API')
-    .setDescription('To-Do List API — test task for Viyar')
+    .setTitle('todo-app-automaze API')
+    .setDescription('To-Do List API — test task for automaze')
     .setVersion('0.0.1')
     .build();
 

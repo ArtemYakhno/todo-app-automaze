@@ -3,7 +3,6 @@ import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.int
 
 export function getCorsConfig(configService: ConfigService): CorsOptions {
   return {
-    origin: configService.get<string>('FRONTEND_URL', 'http://localhost:5173'),
-    credentials: true,
+    origin: configService.get<string>('FRONTEND_URL', 'http://localhost:3000'),
   };
 }
