@@ -2,6 +2,8 @@
 
 A single-page to-do list built as a take-home test task for an **automaze** interview. No login, no accounts — one shared task list that anyone with the link can view and manage.
 
+Live demo [here](https://todo-app-automaze-frontend.vercel.app/)
+
 ## Features
 
 - **Task list** — all tasks fetched from a real PostgreSQL database, with loading, empty, and error states (with retry).
